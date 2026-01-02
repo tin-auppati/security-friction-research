@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  # ตั้งชื่อ Service
+  backend-api:
+    # บอกว่าให้ Build จาก Dockerfile ที่อยู่ในโฟลเดอร์ backend
+    build: ./backend
+    # ตั้งชื่อ Container
+    container_name: go-captcha-backend
+    # Map Port 8080:8080
+    ports:
+      - "8080:8080"
+    # Hot Reload
+    volumes:
+     - ./backend:/app
