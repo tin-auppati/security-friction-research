@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   # ตั้งชื่อ Service
@@ -12,4 +11,27 @@ services:
       - "8080:8080"
     # Hot Reload
     volumes:
-     - ./backend:/app
+      - ./backend:/app
+
+    environment:
+      - PORT=8080
+  frontend:
+    build: ./frontend
+    
+    container_name: nextjs-captcha-frontend
+
+    ports:
+      - "3000:3000"
+    
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+
+    environment:
+      - WATCHPACK_POLLING=true
+    
+    depends_on:
+      - backend-api
+
+    
