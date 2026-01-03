@@ -4,19 +4,21 @@ import (
 	"bytes"
 	"encoding/base64"
 	"net/http"
+	"sync"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/steambap/captcha"
 )
 
-// Global Variable ชั่วคราว (ในของจริงจะใช้ Redis หรือ Database)
+// ใช้ sync.Map เป็น key => value
 // key = capchaId, value
-var captchaStore = make(map[string]string)
+var captchaStore sync.Map
 
-// ส่งกลับไป frontend
-type CaptchaResponse struct {
+// Struct สำหรับ รับ ข้อมูลจาก Frontend ตอนตรวจคำตอบ
+type VerifyRequest struct {
 	CaptchaID string `json:"captchaId"`
-	ImageURL  string `json:"imageUrl"` //base 64
+	Answer  string `json:"answer"` //base 64
 }
 
 func GenerateCaptcha(c *gin.Context) {
@@ -26,6 +28,12 @@ func GenerateCaptcha(c *gin.Context) {
 		c.JSON(500, gin.H{"error": "สร้าง Captch ไม่สำเร็จ"})
 		return
 	}
+
+	//สร้าง ID ประจำตัว TOken
+	realID := uuid.New().String()
+
+	//เก็บลงเซฟ
+	captchaStore.Store(realID,data.Text)
 
 	var buf bytes.Buffer
 	//เขียนรูปภาพลงใน buffer
@@ -38,12 +46,30 @@ func GenerateCaptcha(c *gin.Context) {
 	imgBase64Str := base64.StdEncoding.EncodeToString(buf.Bytes())
 	finalImageURL := "data:image/png;base64," + imgBase64Str
 
-	//จำคำตอบไว้ใน database ตอนนี้ส่งขึ้น console ดูก่อน
-	println("Admin Cheat Sheet - Answer is: ", data.Text)
-
 	//ส่ง JSON กลับไปหา frontend
 	c.JSON(http.StatusOK, gin.H{
-		"image": finalImageURL,
-		"text":  data.Text, //ส่ง test เฉยๆเดี๋ยวลบ
+		"captchaId": realID,
+		"image":  finalImageURL, //ส่ง test เฉยๆเดี๋ยวลบ
 	})
+}
+
+func VerifyCaptcha(c *gin.Context){
+	var req VerifyRequest
+	if err := c.ShouldBindJSON(&req); err != nil{
+		c.JSON(400, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	actualAnswer, ok := captchaStore.Load(req.CaptchaID)
+
+	if !ok {
+		c.JSON(400,gin.H{"success": false, "message" : "ID ไม่ถูกต้องหรือหมดอายุ"})
+	}
+
+	if req.Answer == actualAnswer.(string){
+		captchaStore.Delete(req.CaptchaID)
+		c.JSON(200, gin.H{"success":true, "message": "Correct!"})
+	}else{
+		c.JSON(200,gin.H{"success":false, "message": "Incorrect!"})
+	}
 }

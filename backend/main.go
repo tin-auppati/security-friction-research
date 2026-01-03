@@ -21,6 +21,7 @@ func main() {
         })
 
         api.GET("/captcha", handlers.GenerateCaptcha)
+        api.POST("/verify", handlers.VerifyCaptcha)
     }
 
 
