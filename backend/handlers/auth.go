@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"backend-api/database"
 	"bytes"
 	"encoding/base64"
 	"net/http"
@@ -19,6 +20,7 @@ var captchaStore sync.Map
 type VerifyRequest struct {
 	CaptchaID string `json:"captchaId"`
 	Answer  string `json:"answer"` //base 64
+	TimeTaken int64 `json:"timeTaken`
 }
 
 func GenerateCaptcha(c *gin.Context) {
@@ -66,7 +68,16 @@ func VerifyCaptcha(c *gin.Context){
 		c.JSON(400,gin.H{"success": false, "message" : "ID ไม่ถูกต้องหรือหมดอายุ"})
 	}
 
-	if req.Answer == actualAnswer.(string){
+	isCorrect := (req.Answer == actualAnswer.(string))
+	logEntry := database.ResearchLog{
+		CaptchaID: req.CaptchaID,
+		UserInput: req.Answer,
+		IsCorrect: isCorrect,
+		TimeTaken: req.TimeTaken,
+	}
+	database.DB.Create(&logEntry)
+
+	if isCorrect{
 		captchaStore.Delete(req.CaptchaID)
 		c.JSON(200, gin.H{"success":true, "message": "Correct!"})
 	}else{

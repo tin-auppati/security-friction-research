@@ -1,12 +1,17 @@
 package main
 
 import (
-    "backend-api/handlers"
     "github.com/gin-contrib/cors"
     "github.com/gin-gonic/gin"
+
+    "nextjs-captcha-backend/database"
+	"nextjs-captcha-backend/handlers"
 )
 
 func main() {
+
+    database.ConnectDB()
+
     r := gin.Default()
 
     // ตั้งค่า CORS ให้ Frontend Port 3000 ยิงเข้ามาได้
