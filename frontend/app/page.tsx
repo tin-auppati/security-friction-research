@@ -12,6 +12,8 @@ export default function Home(){
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<{ success: boolean; message: string } | null>(null); // เก็บผลลัพธ์การตรวจ
 
+    //timer state
+    const [StartTime, setStartTime] = useState<number>(0)
 
     //generate
     const fetchCaptcha = async() => {
@@ -26,6 +28,9 @@ export default function Home(){
             setImageURL(res.data.image)
             setCaptchaId(res.data.captchaId)
 
+            //เริ่มจับเวลาหลังโหลดรูปเสร็จ
+            setStartTime(Date.now())
+
         } catch(error) {
             console.error("Error fetching captcha:", error);
             alert("เชื่อมต่อ backend ไม่สำเร็จ");
@@ -39,11 +44,15 @@ export default function Home(){
     const verifyCaptcha = async() => {
         if (!input) return
 
+        //stop time
+        const EndTime = Date.now()
+        const duration = EndTime - StartTime
         try{
             // ยิง POST ไปที่ /api/verify
             const res = await axios.post("http://localhost:8080/api/verify",{
                 captchaId: captchaId, // ต้องส่ง ID กลับไปยืนยันและคำตอบของ user
-                answer: input 
+                answer: input,
+                TimeTaken: duration
             })
 
             // อัปเดตสถานะตามที่ Backend ตอบกลับมา
@@ -55,6 +64,10 @@ export default function Home(){
             // ถ้าถูก ให้ดึงโจทย์ข้อใหม่ทันที
             if (res.data.success) {
                 setTimeout(fetchCaptcha, 2000)
+            } else {
+                //ปล่อยว่าง
+                //เพื่อให้ดูว่าใช้เวลาแก้นานแค่ไหนเพื่อให้สำเร็จ
+                //ถ้าแก้ไม่าสำเร็จเวลาจะไม่หยุด
             }
 
 
